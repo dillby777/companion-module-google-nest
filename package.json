@@ -1,5 +1,5 @@
 {
-	"name": "your-module-name",
+	"name": "google-nest",
 	"version": "0.1.0",
 	"main": "dist/main.js",
 	"type": "module",
@@ -7,7 +7,8 @@
 		"postinstall": "husky",
 		"format": "prettier -w .",
 		"package": "run build && companion-module-build",
-		"build": "rimraf dist && run build:main",
+		"build": "run build:main",
+		"build:og": "rimraf dist && run build:main",
 		"build:main": "tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint",
@@ -16,7 +17,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-your-module-name.git"
+		"url": "git+https://github.com/bitfocus/companion-module-google-nest.git"
 	},
 	"engines": {
 		"node": "^22.20",

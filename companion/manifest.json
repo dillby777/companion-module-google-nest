@@ -1,18 +1,18 @@
 {
 	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
 	"type": "connection",
-	"id": "your-module-name",
-	"name": "your-module-name",
-	"shortname": "module-shortname",
+	"id": "google-nest",
+	"name": "Google: Nest",
+	"shortname": "Google-Nest",
 	"description": "A short one line description of your module",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-your-module-name.git",
-	"bugs": "https://github.com/bitfocus/companion-module-your-module-name/issues",
+	"repository": "git+https://github.com/bitfocus/companion-module-google-nest.git",
+	"bugs": "https://github.com/bitfocus/companion-module-google-nest/issues",
 	"maintainers": [
 		{
-			"name": "Your name",
-			"email": "Your email"
+			"name": "Dylan",
+			"email": "dylan@sonofmedia.ca"
 		}
 	],
 	"runtime": {
@@ -22,7 +22,7 @@
 		"entrypoint": "../dist/main.js"
 	},
 	"legacyIds": [],
-	"manufacturer": "Your company",
+	"manufacturer": "Son of Media",
 	"products": ["Your product"],
 	"keywords": []
 }
