@@ -48,7 +48,7 @@ export function normaliseDevice(device: SdmDevice): DeviceState {
 
 			const ctemp = traits['sdm.devices.traits.Temperature']?.ambientTemperatureCelsius
 			if (ctemp !== undefined) {
-				state.tempCelsius = ctemp
+				state.tempCelsius = Math.round(ctemp * 100) / 100
 			}
 
 			const temp =

@@ -69,7 +69,8 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	updateFeedbacks(): void {
-		UpdateFeedbacks(this)
+		//const feeds = buildFeedbacks(Array.from(this.devices.values()))
+		//this.setFeedbackDefinitions(feeds)`
 	}
 
 	updatePresets(): void {
