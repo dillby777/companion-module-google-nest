@@ -1,5 +1,6 @@
+import { getDisplayName } from './helpers.js'
 import type ModuleInstance from './main.js'
-import type { DeviceState } from './types.js'
+import { TRAIT } from './types.js'
 
 export type FeedbacksSchema = {
 	device_online: {
@@ -23,8 +24,11 @@ export type FeedbacksSchema = {
 	}
 }
 
-export function UpdateFeedbacks(self: ModuleInstance, devices: DeviceState[]): void {
-	const deviceChoices = devices.map((d) => ({ id: d.id, label: d.displayName }))
+export function UpdateFeedbacks(self: ModuleInstance): void {
+	const deviceChoices = Array.from(self.devices.values()).map((d) => ({
+		id: d.name.split('/').pop()!,
+		label: getDisplayName(d),
+	}))
 
 	self.setFeedbackDefinitions({
 		device_online: {
@@ -44,7 +48,8 @@ export function UpdateFeedbacks(self: ModuleInstance, devices: DeviceState[]): v
 				},
 			],
 			callback: ({ options }) => {
-				return self.devices.get(options.deviceId)?.online ?? false
+				const device = self.devices.get(options.deviceId)
+				return device?.traits[TRAIT.CONNECTIVITY]?.status === 'ONLINE'
 			},
 		},
 		thermostat_mode: {
@@ -77,7 +82,8 @@ export function UpdateFeedbacks(self: ModuleInstance, devices: DeviceState[]): v
 				},
 			],
 			callback: ({ options }) => {
-				return self.devices.get(options.deviceId)?.thermostatMode === options.mode
+				const device = self.devices.get(options.deviceId)
+				return device?.traits[TRAIT.THERMOSTAT_MODE]?.mode === options.mode
 			},
 		},
 		hvac_active: {
@@ -98,7 +104,7 @@ export function UpdateFeedbacks(self: ModuleInstance, devices: DeviceState[]): v
 				},
 			],
 			callback: ({ options }) => {
-				const status = self.devices.get(options.deviceId)?.hvacStatus
+				const status = self.devices.get(options.deviceId)?.traits[TRAIT.HVAC]?.status
 				return status === 'HEATING' || status === 'COOLING'
 			},
 		},

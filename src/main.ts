@@ -1,13 +1,12 @@
 import { InstanceBase, InstanceStatus, type SomeCompanionConfigField } from '@companion-module/base'
 import { GetConfigFields, type ModuleConfig } from './config.js'
-import { buildVariableDefinitions, buildVariableValues, type VariablesSchema } from './variables.js'
+import { UpdateVariableDefinitions, type VariablesSchema } from './variables.js'
 import { UpgradeScripts } from './upgrades.js'
 import { UpdateActions, type ActionsSchema } from './actions.js'
 import { UpdateFeedbacks, type FeedbacksSchema } from './feedbacks.js'
 import { UpdatePresets } from './presets.js'
 import { SdmClient } from './sdm-client.js'
-import { normaliseDevice } from './device-state.js'
-import { type DeviceState } from './types.js'
+import type { SdmDevice } from './types.js'
 
 export type ModuleSchema = {
 	config: ModuleConfig
@@ -21,7 +20,7 @@ export { UpgradeScripts }
 
 export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	config!: ModuleConfig // Setup in init()
-	devices = new Map<string, DeviceState>()
+	devices = new Map<string, SdmDevice>()
 
 	private client: SdmClient | null = null
 	private pollTimer: NodeJS.Timeout | null = null
@@ -69,17 +68,18 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	updateFeedbacks(): void {
-		UpdateFeedbacks(this, Array.from(this.devices.values()))
+		UpdateFeedbacks(this)
 	}
 
 	updatePresets(): void {
 		UpdatePresets(this)
 	}
 	updateVariableDefinitions(): void {
-		const defs = buildVariableDefinitions(Array.from(this.devices.values()))
-		const vals = buildVariableValues(Array.from(this.devices.values()))
-		this.setVariableDefinitions(defs)
-		this.setVariableValues(vals)
+		//const defs = buildVariableDefinitions(Array.from(this.devices.values()))
+		//const vals = buildVariableValues(Array.from(this.devices.values()))
+		//this.setVariableDefinitions(defs)
+		//this.etVariableValues(vals)
+		UpdateVariableDefinitions(this)
 	}
 
 	private startPolling(intervalSec: number): void {
@@ -100,18 +100,16 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 		try {
 			const rawDevices = await this.client.listDevices()
-			this.log('info', JSON.stringify(rawDevices))
-			const normalised = rawDevices.map(normaliseDevice)
+			this.log('info', 'raw: ' + JSON.stringify(rawDevices))
+			//const normalised = rawDevices.map(normaliseDevice)
 
 			this.devices.clear()
-			for (const device of normalised) {
-				this.devices.set(device.id, device)
-				this.log(
-					'debug',
-					`Device ${device.id}: ${device.displayName} (${device.type}) is ${device.online ? 'online' : 'offline'}`,
-				)
+			for (const device of rawDevices) {
+				const id = device.name.split('/').pop()!
+				this.devices.set(id, device)
+				this.log('debug', 'Device: ' + JSON.stringify(device))
 			}
-			this.log('info', JSON.stringify(normalised))
+			//this.log('info', JSON.stringify(normalised))
 			this.updateVariableDefinitions()
 			//buildVariableDefinitions(normalised)
 			//buildVariableValues(normalised)

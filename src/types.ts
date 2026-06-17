@@ -9,27 +9,8 @@ export interface SdmDevice {
 	parentRelations?: Array<{ parent: string; displayName: string }>
 }
 
-/** Union of all traits the SDM API may return */
-export interface SdmTraits {
-	'sdm.devices.traits.Info'?: { customName: string }
-	'sdm.devices.traits.Connectivity'?: { status: 'ONLINE' | 'OFFLINE' }
-	'sdm.devices.traits.Temperature'?: { ambientTemperatureCelsius: number }
-	'sdm.devices.traits.Humidity'?: { ambientHumidityPercent: number }
-	'sdm.devices.traits.ThermostatMode'?: {
-		mode: ThermostatMode
-		availableModes: ThermostatMode[]
-	}
-	'sdm.devices.traits.ThermostatHvac'?: { status: HvacStatus }
-	'sdm.devices.traits.ThermostatEco'?: {
-		mode: 'MANUAL_ECO' | 'OFF'
-		availableModes: string[]
-		heatCelsius: number
-		coolCelsius: number
-	}
-	'sdm.devices.traits.ThermostatTemperatureSetpoint'?: {
-		heatCelsius?: number
-		coolCelsius?: number
-	}
+export type SdmTraits = {
+	[key: string]: Record<string, unknown> | undefined
 }
 
 export type ThermostatMode = 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF'
@@ -48,6 +29,14 @@ export interface DeviceState {
 	thermostatMode?: ThermostatMode
 	hvacStatus?: HvacStatus
 }
+
+export const TRAIT = {
+	CONNECTIVITY: 'sdm.devices.traits.Connectivity',
+	TEMPERATURE: 'sdm.devices.traits.Temperature',
+	THERMOSTAT_MODE: 'sdm.devices.traits.ThermostatMode',
+	HVAC: 'sdm.devices.traits.ThermostatHvac',
+	// etc
+} as const
 
 /** OAuth token response from Google */
 export interface TokenResponse {

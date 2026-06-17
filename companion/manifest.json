@@ -22,7 +22,7 @@
 		"entrypoint": "../dist/main.js"
 	},
 	"legacyIds": [],
-	"manufacturer": "Son of Media",
-	"products": ["Google Nest devices module"],
+	"manufacturer": "Google",
+	"products": ["Google Nest devices"],
 	"keywords": []
 }
