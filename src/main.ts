@@ -100,6 +100,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 		try {
 			const rawDevices = await this.client.listDevices()
+			this.log('info', JSON.stringify(rawDevices))
 			const normalised = rawDevices.map(normaliseDevice)
 
 			this.devices.clear()

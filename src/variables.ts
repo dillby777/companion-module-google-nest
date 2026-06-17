@@ -1,4 +1,4 @@
-import { type CompanionVariableDefinitions, type CompanionVariableValues, } from '@companion-module/base'
+import { type CompanionVariableDefinitions, type CompanionVariableValues } from '@companion-module/base'
 import { type DeviceState } from './types.js'
 import { celsiusToFahrenheit } from './device-state.js'
 
@@ -10,7 +10,9 @@ function deviceVariableDefinitions(displayName: string): CompanionVariableDefini
 	return {
 		[`${displayName}_name`]: { name: label('Display name') },
 		[`${displayName}_id`]: { name: label('Device ID') },
+		[`${displayName}_type`]: { name: label('Device type') },
 		[`${displayName}_online`]: { name: label('Online status') },
+		[`${displayName}_temperature`]: { name: label('Temperature') },
 		[`${displayName}_temp_c`]: { name: label('Temperature (°C)') },
 		[`${displayName}_temp_f`]: { name: label('Temperature (°F)') },
 		[`${displayName}_humidity`]: { name: label('Humidity (%)') },
@@ -38,7 +40,9 @@ export function buildVariableValues(devices: DeviceState[]): CompanionVariableVa
 		const { displayName } = device
 		values[`${displayName}_name`] = device.displayName
 		values[`${displayName}_id`] = device.id
+		values[`${displayName}_type`] = device.type
 		values[`${displayName}_online`] = String(device.online)
+		values[`${displayName}_temperature`] = device.temperature ?? ''
 		values[`${displayName}_temp_c`] = device.tempCelsius ?? ''
 		values[`${displayName}_temp_f`] = device.tempCelsius !== undefined ? celsiusToFahrenheit(device.tempCelsius) : ''
 		values[`${displayName}_humidity`] = device.humidity ?? ''
