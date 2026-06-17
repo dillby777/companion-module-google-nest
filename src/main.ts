@@ -69,7 +69,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	updateFeedbacks(): void {
-		UpdateFeedbacks(this)
+		UpdateFeedbacks(this, Array.from(this.devices.values()))
 	}
 
 	updatePresets(): void {
