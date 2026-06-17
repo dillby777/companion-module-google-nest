@@ -4,7 +4,7 @@
 	"id": "google-nest",
 	"name": "Google: Nest",
 	"shortname": "Google-Nest",
-	"description": "A short one line description of your module",
+	"description": "Gets Google Nest devices, thermostats for now",
 	"version": "0.1.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-google-nest.git",
