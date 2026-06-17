@@ -29,6 +29,12 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		id: d.name.split('/').pop()!,
 		label: getDisplayName(d),
 	}))
+	const deviceThermostatChoices = Array.from(self.devices.values())
+		.filter((d) => d.type === 'sdm.devices.types.THERMOSTAT')
+		.map((d) => ({
+			id: d.name.split('/').pop()!,
+			label: getDisplayName(d),
+		}))
 
 	self.setFeedbackDefinitions({
 		device_online: {
@@ -65,8 +71,8 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					type: 'dropdown',
 					id: 'deviceId',
 					label: 'Device',
-					default: deviceChoices[0]?.id ?? '',
-					choices: deviceChoices,
+					default: deviceThermostatChoices[0]?.id ?? '',
+					choices: deviceThermostatChoices,
 				},
 				{
 					type: 'dropdown',
@@ -99,8 +105,8 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					type: 'dropdown',
 					id: 'deviceId',
 					label: 'Device',
-					default: deviceChoices[0]?.id ?? '',
-					choices: deviceChoices,
+					default: deviceThermostatChoices[0]?.id ?? '',
+					choices: deviceThermostatChoices,
 				},
 			],
 			callback: ({ options }) => {

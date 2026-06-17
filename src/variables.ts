@@ -1,13 +1,12 @@
-import { type CompanionVariableDefinition } from '@companion-module/base'
-// import { type DeviceState } from './types.js'
 import type ModuleInstance from './main.js'
-import { getDisplayName } from './helpers.js'
+import { buildVariableId, getDisplayName, sanitizeId } from './helpers.js'
+import type {
+	CompanionVariableDefinition,
+	CompanionVariableValue,
+	CompanionVariableValues,
+} from '@companion-module/base'
 
-export type VariablesSchema = Record<string, string | number | boolean | undefined>
-
-function sanitizeId(value: string): string {
-	return value.toLowerCase().replace(/[^a-z0-9_-]/g, '_')
-}
+export type VariablesSchema = Record<string, CompanionVariableValue | undefined>
 
 export function UpdateVariableDefinitions(self: ModuleInstance): void {
 	self.log('debug', 'Updating variable definitions')
@@ -26,13 +25,35 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 			for (const [attrKey, attrValue] of Object.entries(traitData)) {
 				if (Array.isArray(attrValue)) continue
-				const variableId = `${prefix}_${segment}_${attrKey.toLowerCase()}`
+				const variableId = buildVariableId(displayName, traitName, attrKey)
 				definitions[variableId] = { name: label(`${segment}: ${attrKey}`) }
 			}
 		}
 	}
 
 	self.setVariableDefinitions(definitions)
+
+	const values: CompanionVariableValues = {}
+
+	for (const device of self.devices.values()) {
+		const displayName = getDisplayName(device)
+		const prefix = sanitizeId(displayName)
+
+		values[`${prefix}_name`] = displayName
+
+		for (const [traitName, traitData] of Object.entries(device.traits)) {
+			if (!traitData) continue
+			//const segment = traitName.split('.').pop()!.toLowerCase()
+
+			for (const [attrKey, attrValue] of Object.entries(traitData)) {
+				if (Array.isArray(attrValue)) continue
+				const variableId = buildVariableId(displayName, traitName, attrKey)
+				values[variableId] = attrValue as string | number | boolean
+			}
+		}
+	}
+
+	self.setVariableValues(values)
 }
 
 // function deviceVariableDefinitions(displayName: string): CompanionVariableDefinitions {

@@ -9,3 +9,13 @@ export function getDisplayName(device: SdmDevice): string {
 export function roundToNearestHalf(num: number): number {
 	return Math.round(num * 2) / 2
 }
+
+export function sanitizeId(value: string): string {
+	return value.toLowerCase().replace(/[^a-z0-9_-]/g, '_')
+}
+
+export function buildVariableId(displayName: string, traitName: string, attrKey: string): string {
+	const prefix = sanitizeId(displayName)
+	const segment = traitName.split('.').pop()!.toLowerCase()
+	return `${prefix}_${segment}_${attrKey.toLowerCase()}`
+}
