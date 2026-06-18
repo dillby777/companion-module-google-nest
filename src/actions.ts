@@ -10,6 +10,7 @@ export type ActionsSchema = {
 	}
 	set_mode: { options: { deviceId: string; mode: string } }
 	set_mode_eco: { options: { deviceId: string; mode: 'OFF' | 'MANUAL_ECO' } }
+	fan_timer: { options: { deviceId: string; fanMode: 'OFF' | 'ON'; timer: number } }
 }
 
 export function UpdateActions(self: ModuleInstance): void {

@@ -340,5 +340,48 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 				self.log('info', `Set ${getDisplayName(device)} ECO mode to ${event.options.mode}`)
 			},
 		},
+		fan_timer: {
+			name: 'Fan Timer',
+			options: [
+				{
+					type: 'dropdown' as const,
+					id: 'deviceId',
+					label: 'Device',
+					default: deviceThermostatChoices[0]?.id ?? '',
+					choices: deviceThermostatChoices,
+				},
+				{
+					type: 'dropdown' as const,
+					id: 'fanMode',
+					label: 'Mode',
+					default: 'OFF',
+					choices: [
+						{ id: 'OFF', label: 'Off' },
+						{ id: 'ON', label: 'On' },
+					],
+				},
+				{
+					type: 'number' as const,
+					id: 'timer',
+					label: 'Run Time (seconds)',
+					default: 900,
+					min: 1,
+					max: 43200,
+					step: 1,
+				},
+			],
+			callback: async (event: CompanionActionEvent<{ deviceId: string; fanMode: string; timer: number }>) => {
+				const device = self.devices.get(event.options.deviceId)
+				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
+
+				if (!device || !mode || !self.client) return
+
+				await self.client.executeCommand(device.name, 'sdm.devices.commands.Fan.SetTimer', {
+					timerMode: event.options.fanMode,
+					duration: event.options.timer,
+				})
+				self.log('info', `Set ${getDisplayName(device)} Fan Timer to ${event.options.timer} seconds`)
+			},
+		},
 	}
 }
