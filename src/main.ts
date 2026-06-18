@@ -22,7 +22,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	config!: ModuleConfig // Setup in init()
 	devices = new Map<string, SdmDevice>()
 
-	private client: SdmClient | null = null
+	public client: SdmClient | null = null
 	private pollTimer: NodeJS.Timeout | null = null
 
 	constructor(internal: unknown) {
@@ -107,7 +107,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 			for (const device of rawDevices) {
 				const id = device.name.split('/').pop()!
 				this.devices.set(id, device)
-				this.log('debug', 'Device: ' + JSON.stringify(device))
+				//this.log('debug', 'Device: ' + JSON.stringify(device))
 			}
 			//this.log('info', JSON.stringify(normalised))
 			this.updateVariableDefinitions()

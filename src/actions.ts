@@ -1,57 +1,19 @@
-import { getDisplayName } from './helpers.js'
 import type ModuleInstance from './main.js'
+import { ThermostatActions } from './actionsThermostat.js'
 
 export type ActionsSchema = {
-	increase_temperature: {
-		options: {
-			deviceId: string
-		}
+	adjust_temperature: { options: { deviceId: string; direction: 'increase' | 'decrease' } }
+	adjust_temperature_heatcool: { options: { deviceId: string; direction: 'increase' | 'decrease' } }
+	set_temperature: { options: { deviceId: string; mode: 'HEAT' | 'COOL'; temperature: number } }
+	set_temperature_heatcool: {
+		options: { deviceId: string; temperatureHeat: number; temperatureCool: number }
 	}
-	decrease_temperature: {
-		options: {
-			deviceId: string
-		}
-	}
+	set_mode: { options: { deviceId: string; mode: string } }
+	set_mode_eco: { options: { deviceId: string; mode: 'OFF' | 'MANUAL_ECO' } }
 }
 
 export function UpdateActions(self: ModuleInstance): void {
-	const deviceThermostatChoices = Array.from(self.devices.values())
-		.filter((d) => d.type === 'sdm.devices.types.THERMOSTAT')
-		.map((d) => ({
-			id: d.name.split('/').pop()!,
-			label: getDisplayName(d),
-		}))
-
 	self.setActionDefinitions({
-		increase_temperature: {
-			name: 'Increase Temperature',
-			options: [
-				{
-					type: 'dropdown',
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
-			],
-			callback: async (event) => {
-				console.log('Increase temperature for device:', event.options.deviceId)
-			},
-		},
-		decrease_temperature: {
-			name: 'Decrease Temperature',
-			options: [
-				{
-					type: 'dropdown',
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
-			],
-			callback: async (event) => {
-				console.log('Decrease temperature for device:', event.options.deviceId)
-			},
-		},
+		...ThermostatActions(self),
 	})
 }

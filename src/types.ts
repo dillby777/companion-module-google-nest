@@ -10,7 +10,23 @@ export interface SdmDevice {
 }
 
 export type SdmTraits = {
-	[key: string]: Record<string, unknown> | undefined
+	'sdm.devices.traits.ThermostatMode'?: {
+		mode: ThermostatMode
+	}
+	'sdm.devices.traits.ThermostatTemperatureSetpoint'?: {
+		coolCelsius?: number
+		heatCelsius?: number
+	}
+	'sdm.devices.traits.Connectivity'?: {
+		status: 'ONLINE' | 'OFFLINE'
+	}
+	'sdm.devices.traits.Temperature'?: {
+		ambientTemperatureCelsius: number
+	}
+	'sdm.devices.traits.ThermostatHvac'?: {
+		status: HvacStatus
+	}
+	[key: string]: Record<string, unknown> | undefined // fallback for any other traits
 }
 
 export type ThermostatMode = 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF'
