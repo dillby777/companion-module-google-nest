@@ -6,7 +6,7 @@ import { UpdateActions, type ActionsSchema } from './actions.js'
 import { UpdateFeedbacks, type FeedbacksSchema } from './feedbacks.js'
 import { UpdatePresets } from './presets.js'
 import { SdmClient } from './sdm-client.js'
-import type { SdmDevice } from './types.js'
+import type { SdmDevice, SdmStructure } from './types.js'
 
 export type ModuleSchema = {
 	config: ModuleConfig
@@ -21,6 +21,7 @@ export { UpgradeScripts }
 export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	config!: ModuleConfig // Setup in init()
 	devices = new Map<string, SdmDevice>()
+	structures = new Map<string, SdmStructure>()
 
 	public client: SdmClient | null = null
 	private pollTimer: NodeJS.Timeout | null = null
@@ -99,15 +100,26 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		if (!this.client) return
 
 		try {
-			const rawDevices = await this.client.listDevices()
-			this.log('info', 'raw: ' + JSON.stringify(rawDevices))
+			const [rawDevices, rawStructures] = await Promise.all([this.client.listDevices(), this.client.listStructures()])
+			//this.log('info', 'raw: ' + JSON.stringify(rawDevices))
 			//const normalised = rawDevices.map(normaliseDevice)
+
+			this.structures.clear()
+			for (const structure of rawStructures) {
+				const id = structure.name.split('/').pop()!
+				this.structures.set(id, structure)
+			}
 
 			this.devices.clear()
 			for (const device of rawDevices) {
 				const id = device.name.split('/').pop()!
+				const parentPath = device.parentRelations?.[0]?.parent ?? ''
+				const structureId = parentPath.match(/structures\/([^/]+)/)?.[1]
+				const structure = structureId ? this.structures.get(structureId) : undefined
+				device.structureName = structure?.traits['sdm.structures.traits.Info']?.customName ?? 'Unknown'
+
 				this.devices.set(id, device)
-				//this.log('debug', 'Device: ' + JSON.stringify(device))
+				this.log('debug', 'Device: ' + JSON.stringify(device))
 			}
 			//this.log('info', JSON.stringify(normalised))
 			this.updateVariableDefinitions()

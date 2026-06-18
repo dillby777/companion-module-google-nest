@@ -7,6 +7,7 @@ export interface SdmDevice {
 	assignee?: string
 	traits: SdmTraits
 	parentRelations?: Array<{ parent: string; displayName: string }>
+	structureName?: string
 }
 
 export type SdmTraits = {
@@ -59,4 +60,13 @@ export interface TokenResponse {
 	access_token: string
 	expires_in: number
 	token_type: string
+}
+
+export interface SdmStructure {
+	name: string
+	traits: {
+		'sdm.structures.traits.Info'?: {
+			customName: string
+		}
+	}
 }

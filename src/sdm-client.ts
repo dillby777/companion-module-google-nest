@@ -1,4 +1,4 @@
-import { type SdmDevice, type TokenResponse } from './types.js'
+import { type SdmDevice, type SdmStructure, type TokenResponse } from './types.js'
 import { type ModuleConfig } from './config.js'
 
 const SDM_BASE = 'https://smartdevicemanagement.googleapis.com/v1'
@@ -94,5 +94,9 @@ export class SdmClient {
 			const text = await res.text()
 			throw new Error(`SDM executeCommand failed (${res.status}): ${text}`)
 		}
+	}
+	async listStructures(): Promise<SdmStructure[]> {
+		const data = await this.get<{ structures?: SdmStructure[] }>(`/enterprises/${this.config.projectId}/structures`)
+		return data.structures ?? []
 	}
 }
