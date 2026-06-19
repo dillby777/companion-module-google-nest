@@ -7,7 +7,7 @@ export interface SdmDevice {
 	assignee?: string
 	traits: SdmTraits
 	parentRelations?: Array<{ parent: string; displayName: string }>
-	structureName?: string
+	structureName: string
 }
 
 export type SdmTraits = {

@@ -14,7 +14,10 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 	for (const device of self.devices.values()) {
 		const displayName = getDisplayName(device)
-		const prefix = sanitizeId(displayName)
+		const home = device.structureName
+		console.log('debug', `Building variable definitions for device: ${displayName} (Home: ${home})`)
+		const variableName = home + ' ' + displayName
+		const prefix = sanitizeId(variableName)
 		const label = (suffix: string) => `[${displayName}] ${suffix}`
 
 		definitions[`${prefix}_name`] = { name: label('Display Name') }
@@ -25,7 +28,7 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 			for (const [attrKey, attrValue] of Object.entries(traitData)) {
 				if (Array.isArray(attrValue)) continue
-				const variableId = buildVariableId(displayName, traitName, attrKey)
+				const variableId = buildVariableId(home, displayName, traitName, attrKey)
 				definitions[variableId] = { name: label(`${segment}: ${attrKey}`) }
 			}
 		}
@@ -37,7 +40,9 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 	for (const device of self.devices.values()) {
 		const displayName = getDisplayName(device)
-		const prefix = sanitizeId(displayName)
+		const home = device.structureName
+		const variableName = home + ' ' + displayName
+		const prefix = sanitizeId(variableName)
 
 		values[`${prefix}_name`] = displayName
 
@@ -47,7 +52,7 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 			for (const [attrKey, attrValue] of Object.entries(traitData)) {
 				if (Array.isArray(attrValue)) continue
-				const variableId = buildVariableId(displayName, traitName, attrKey)
+				const variableId = buildVariableId(home, displayName, traitName, attrKey)
 				values[variableId] = attrValue as string | number | boolean
 			}
 		}
