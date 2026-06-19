@@ -43,6 +43,14 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			tooltip: 'From console.nest.google.com/device-access',
 		},
 		{
+			type: 'static-text',
+			id: 'info',
+			label: 'Google Refresh token',
+			value:
+				'Follow these google instructions to obtain the refresh token <a href="https://developers.google.com/nest/device-access/authorize" target="_blank">Google OAuth flow</a',
+			width: 8,
+		},
+		{
 			type: 'textinput',
 			id: 'refreshToken',
 			label: 'OAuth Refresh Token',
