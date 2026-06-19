@@ -32,7 +32,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 	async init(config: ModuleConfig): Promise<void> {
 		this.config = config
-		this.log('info', 'Config: ' + JSON.stringify(this.config))
+		//this.log('info', 'Config: ' + JSON.stringify(this.config))
 		this.client = new SdmClient(config)
 
 		this.updateStatus(InstanceStatus.Ok)
@@ -52,7 +52,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 	async configUpdated(config: ModuleConfig): Promise<void> {
 		this.config = config
-		this.log('info', 'Config updated: ' + JSON.stringify(this.config))
+		this.log('info', 'Config updated')
 		this.client = new SdmClient(config)
 
 		await this.getGoogleNestDevices()
@@ -101,8 +101,6 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 		try {
 			const [rawDevices, rawStructures] = await Promise.all([this.client.listDevices(), this.client.listStructures()])
-			//this.log('info', 'raw: ' + JSON.stringify(rawDevices))
-			//const normalised = rawDevices.map(normaliseDevice)
 
 			this.structures.clear()
 			for (const structure of rawStructures) {
@@ -119,12 +117,8 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 				device.structureName = structure?.traits['sdm.structures.traits.Info']?.customName ?? 'Unknown'
 
 				this.devices.set(id, device)
-				this.log('debug', 'Device: ' + JSON.stringify(device))
 			}
-			//this.log('info', JSON.stringify(normalised))
 			this.updateVariableDefinitions()
-			//buildVariableDefinitions(normalised)
-			//buildVariableValues(normalised)
 			this.updateStatus(InstanceStatus.Ok)
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err)

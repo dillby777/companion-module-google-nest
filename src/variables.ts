@@ -15,7 +15,6 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 	for (const device of self.devices.values()) {
 		const displayName = getDisplayName(device)
 		const home = device.structureName
-		console.log('debug', `Building variable definitions for device: ${displayName} (Home: ${home})`)
 		const variableName = home + ' ' + displayName
 		const prefix = sanitizeId(variableName)
 		const label = (suffix: string) => `[${displayName}] ${suffix}`

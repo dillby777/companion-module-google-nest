@@ -13,7 +13,6 @@ export function roundToNearestHalf(num: number): number {
 }
 
 export function sanitizeId(value: string): string {
-	console.log('debug', `Sanitizing ID: ${value}`)
 	return value.toLowerCase().replace(/[^a-z0-9_-]/g, '_')
 }
 
