@@ -47,7 +47,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'info',
 			label: 'Google Refresh token',
 			value:
-				'Follow these google instructions to obtain the refresh token <a href="https://developers.google.com/nest/device-access/authorize" target="_blank">Google OAuth flow</a',
+				'Follow these google instructions to obtain the refresh token <a href="https://developers.google.com/nest/device-access/authorize" target="_blank">Google OAuth flow</a>',
 			width: 8,
 		},
 		{
@@ -63,10 +63,11 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'pollIntervalSec',
 			label: 'Poll Interval (seconds)',
 			default: 30,
-			min: 10,
+			min: 12,
 			max: 300,
 			width: 4,
-			tooltip: 'How often to refresh device state from the SDM API',
+			tooltip:
+				'How often to refresh device state from the SDM API, the SDM sandbox has a rate limit of 5 queries per minute. set the poll rate appropriately',
 		},
 	]
 }

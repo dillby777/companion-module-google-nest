@@ -33,20 +33,6 @@ export type SdmTraits = {
 export type ThermostatMode = 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF'
 export type HvacStatus = 'HEATING' | 'COOLING' | 'IDLE'
 
-/** Normalised device state we keep in memory */
-export interface DeviceState {
-	id: string // short ID extracted from the full resource name
-	fullName: string // full SDM resource path
-	displayName: string
-	type: string
-	online: boolean
-	tempCelsius?: number
-	temperature?: number
-	humidity?: number
-	thermostatMode?: ThermostatMode
-	hvacStatus?: HvacStatus
-}
-
 export const TRAIT = {
 	CONNECTIVITY: 'sdm.devices.traits.Connectivity',
 	TEMPERATURE: 'sdm.devices.traits.Temperature',
