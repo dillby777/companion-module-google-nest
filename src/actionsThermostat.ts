@@ -18,7 +18,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 		})
 		.map((d) => ({
 			id: d.name.split('/').pop()!,
-			label: getDisplayName(d),
+			label: '[' + d.structureName + '] ' + getDisplayName(d),
 		}))
 
 	return {

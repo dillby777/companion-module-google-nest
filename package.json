@@ -6,7 +6,7 @@
 	"scripts": {
 		"postinstall": "husky",
 		"format": "prettier -w .",
-		"package": "run build && companion-module-build",
+		"package": "run build:og && companion-module-build",
 		"build": "run build:main",
 		"build:og": "rimraf dist && run build:main",
 		"build:main": "tsc -p tsconfig.build.json",
