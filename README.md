@@ -1,11 +1,9 @@
 # companion-module-google-home
 
-See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
+For controlling Google Nest products, primarily Google Nest thermostats.
 
-## Getting started
-
-Executing a `yarn` command should perform all necessary steps to develop the module, if it does not then follow the steps below.
-
-The module can be built once with `yarn build`. This should be enough to get the module to be loadable by companion.
-
-While developing the module, by using `yarn dev` the compiler will be run in watch mode to recompile the files on change.
+## Requirements:
+1. Google Cloud project with the "Smart Device Management API" enabled
+2. Create OAuth credentials in the Google Cloud project
+3. Create a Nest Device Access project and link it to your Google Cloud project. https://developers.google.com/nest/device-access
+4. Get OAuth tokens https://developers.google.com/nest/device-access/authorize
