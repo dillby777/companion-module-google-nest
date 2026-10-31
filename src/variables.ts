@@ -1,5 +1,5 @@
 import type ModuleInstance from './main.js'
-import { buildVariableId, getDisplayName, roundToNearestHalf, sanitizeId } from './helpers.js'
+import { buildDevicePrefixes, buildVariableId, getDisplayName, roundToNearestHalf } from './helpers.js'
 import type {
 	CompanionVariableDefinition,
 	CompanionVariableValue,
@@ -10,16 +10,21 @@ export type VariablesSchema = Record<string, CompanionVariableValue | undefined>
 
 export function UpdateVariableDefinitions(self: ModuleInstance): void {
 	self.log('debug', 'Updating variable definitions')
-	const definitions: Record<string, CompanionVariableDefinition> = {}
 
-	for (const device of self.devices.values()) {
+	const definitions: Record<string, CompanionVariableDefinition> = {}
+	const values: CompanionVariableValues = {}
+	const prefixes = buildDevicePrefixes(self.devices.values())
+
+	for (const [deviceId, device] of self.devices) {
+		const prefix = prefixes.get(deviceId)!
 		const displayName = getDisplayName(device)
 		const home = device.structureName
-		const variableName = home + ' ' + displayName
-		const prefix = sanitizeId(variableName)
-		const label = (suffix: string) => `[${displayName}] ${suffix}`
+		const label = (suffix: string) => `[${home} / ${displayName}] ${suffix}`
 
 		definitions[`${prefix}_name`] = { name: label('Display Name') }
+		definitions[`${prefix}_home`] = { name: label('Home Name') }
+		values[`${prefix}_name`] = displayName
+		values[`${prefix}_home`] = home
 
 		for (const [traitName, traitData] of Object.entries(device.traits)) {
 			if (!traitData) continue
@@ -27,33 +32,11 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 
 			for (const [attrKey, attrValue] of Object.entries(traitData)) {
 				if (Array.isArray(attrValue)) continue
-				const variableId = buildVariableId(home, displayName, traitName, attrKey)
+
+				const variableId = buildVariableId(prefix, traitName, attrKey)
 				definitions[variableId] = { name: label(`${segment}: ${attrKey}`) }
-			}
-		}
-	}
 
-	self.setVariableDefinitions(definitions)
-
-	const values: CompanionVariableValues = {}
-
-	for (const device of self.devices.values()) {
-		const displayName = getDisplayName(device)
-		const home = device.structureName
-		const variableName = home + ' ' + displayName
-		const prefix = sanitizeId(variableName)
-
-		values[`${prefix}_name`] = displayName
-
-		for (const [traitName, traitData] of Object.entries(device.traits)) {
-			if (!traitData) continue
-
-			for (const [attrKey, attrValue] of Object.entries(traitData)) {
-				if (Array.isArray(attrValue)) continue
-				const variableId = buildVariableId(home, displayName, traitName, attrKey)
-				//values[variableId] = attrValue as string | number | boolean
-
-				let finalValue: string | number | boolean = attrValue as string | number | boolean
+				let finalValue = attrValue as string | number | boolean
 
 				if (typeof finalValue === 'number') {
 					if (traitName === 'sdm.devices.traits.Temperature') {
@@ -71,5 +54,6 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		}
 	}
 
+	self.setVariableDefinitions(definitions)
 	self.setVariableValues(values)
 }

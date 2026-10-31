@@ -1,5 +1,5 @@
 import { type SdmDevice, type SdmStructure, type TokenResponse } from './types.js'
-import { type ModuleConfig } from './config.js'
+import { type ModuleConfig, type ModuleSecrets } from './config.js'
 
 const SDM_BASE = 'https://smartdevicemanagement.googleapis.com/v1'
 const TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
@@ -11,8 +11,12 @@ const TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
 export class SdmClient {
 	private accessToken: string | null = null
 	private tokenExpiresAt = 0
+	private refreshing: Promise<void> | null = null
 
-	constructor(private readonly config: ModuleConfig) {}
+	constructor(
+		private readonly config: ModuleConfig,
+		private readonly secrets: ModuleSecrets,
+	) {}
 
 	// ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -20,8 +24,8 @@ export class SdmClient {
 	private async refreshAccessToken(): Promise<void> {
 		const body = new URLSearchParams({
 			client_id: this.config.clientId,
-			client_secret: this.config.clientSecret,
-			refresh_token: this.config.refreshToken,
+			client_secret: this.secrets.clientSecret,
+			refresh_token: this.secrets.refreshToken,
 			grant_type: 'refresh_token',
 		})
 
@@ -42,10 +46,13 @@ export class SdmClient {
 		this.tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000
 	}
 
-	/** Return a valid access token, refreshing if necessary */
+	/** Return a valid access token, refreshing if necessary (concurrent callers share one refresh) */
 	private async getToken(): Promise<string> {
 		if (!this.accessToken || Date.now() >= this.tokenExpiresAt) {
-			await this.refreshAccessToken()
+			this.refreshing ??= this.refreshAccessToken().finally(() => {
+				this.refreshing = null
+			})
+			await this.refreshing
 		}
 		return this.accessToken!
 	}

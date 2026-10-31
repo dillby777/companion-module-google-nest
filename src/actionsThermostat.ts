@@ -1,157 +1,181 @@
 import type { CompanionActionEvent, CompanionActionDefinitions } from '@companion-module/base'
-import { getDisplayName } from './helpers.js'
+import { getDisplayName, roundToNearestHalf } from './helpers.js'
 import type ModuleInstance from './main.js'
 import type { ActionsSchema } from './actions.js'
+import { TRAIT, type SdmDevice, type ThermostatMode } from './types.js'
 
-const roundToHalf = (val: number) => Math.round(val * 2) / 2
+const CMD = {
+	SET_COOL: 'sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool',
+	SET_HEAT: 'sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat',
+	SET_RANGE: 'sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange',
+	SET_MODE: 'sdm.devices.commands.ThermostatMode.SetMode',
+	SET_ECO: 'sdm.devices.commands.ThermostatEco.SetMode',
+	SET_FAN: 'sdm.devices.commands.Fan.SetTimer',
+} as const
+
+/** Look up the selected device, logging why when the action can't run */
+function getThermostat(self: ModuleInstance, deviceId: string): SdmDevice | undefined {
+	if (!self.client) {
+		self.log('warn', 'Not connected to Google; check the connection settings')
+		return undefined
+	}
+	const device = self.devices.get(deviceId)
+	if (!device) {
+		self.log('warn', `Device "${deviceId || '(none selected)'}" not found; it may have been removed or not loaded yet`)
+		return undefined
+	}
+	return device
+}
+
+/**
+ * Send a command, log the outcome, and on success update the cached state
+ * so variables and feedbacks reflect the change before the next poll.
+ */
+async function sendCommand(
+	self: ModuleInstance,
+	device: SdmDevice,
+	command: string,
+	params: Record<string, unknown>,
+	description: string,
+	applyCache?: () => void,
+): Promise<void> {
+	if (!self.client) return
+
+	try {
+		await self.client.executeCommand(device.name, command, params)
+	} catch (err) {
+		self.log('error', `${description} failed: ${err instanceof Error ? err.message : String(err)}`)
+		return
+	}
+
+	applyCache?.()
+	self.log('info', description)
+	self.updateVariableDefinitions()
+	self.checkFeedbacks('thermostat_mode', 'hvac_active')
+}
 
 export function ThermostatActions(self: ModuleInstance): CompanionActionDefinitions<ActionsSchema> {
-	const deviceThermostatChoices = Array.from(self.devices.values())
-		.filter((d) => {
-			if (d.type !== 'sdm.devices.types.THERMOSTAT') return false
-			const mode = d.traits['sdm.devices.traits.ThermostatMode']?.mode
-			const setpoint = d.traits['sdm.devices.traits.ThermostatTemperatureSetpoint']
-			if (mode === 'HEAT') return setpoint?.heatCelsius !== undefined
-			if (mode === 'COOL') return setpoint?.coolCelsius !== undefined
-			if (mode === 'HEATCOOL') return setpoint?.heatCelsius !== undefined && setpoint?.coolCelsius !== undefined
-			return false
-		})
+	// Every thermostat is selectable; each action checks the mode itself and tells the user if it can't run
+	const thermostatChoices = Array.from(self.devices.values())
+		.filter((d) => d.type === 'sdm.devices.types.THERMOSTAT')
 		.map((d) => ({
 			id: d.name.split('/').pop()!,
-			label: '[' + d.structureName + '] ' + getDisplayName(d),
+			label: `[${d.structureName}] ${getDisplayName(d)}`,
 		}))
+
+	const deviceOption = () => ({
+		type: 'dropdown' as const,
+		id: 'deviceId' as const,
+		label: 'Device',
+		default: thermostatChoices[0]?.id ?? '',
+		choices: thermostatChoices,
+	})
+
+	const directionOption = () => ({
+		type: 'dropdown' as const,
+		id: 'direction' as const,
+		label: 'Direction',
+		default: 'increase',
+		disableAutoExpression: true,
+		choices: [
+			{ id: 'increase', label: 'Increase' },
+			{ id: 'decrease', label: 'Decrease' },
+		],
+	})
 
 	return {
 		adjust_temperature: {
 			name: 'Adjust Temperature',
-			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
-				{
-					type: 'dropdown' as const,
-					id: 'direction',
-					label: 'Direction',
-					default: 'increase',
-					choices: [
-						{ id: 'increase', label: 'Increase' },
-						{ id: 'decrease', label: 'Decrease' },
-					],
-				},
-			],
+			description: 'Raise or lower the setpoint by 0.5°C. Works when the thermostat is in Heat or Cool mode.',
+			options: [deviceOption(), directionOption()],
 			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
-				const setpoint = device?.traits['sdm.devices.traits.ThermostatTemperatureSetpoint']
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !setpoint || !self.client) return
+				const name = getDisplayName(device)
+				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
+				const setpoint = device.traits[TRAIT.SETPOINT]
+				const step = event.options.direction === 'increase' ? 0.5 : -0.5
 
-				const INCREMENT = event.options.direction === 'increase' ? 0.5 : -0.5
-				const newCool = roundToHalf(setpoint.coolCelsius! + INCREMENT)
-				const newHeat = roundToHalf(setpoint.heatCelsius! + INCREMENT)
-
-				switch (mode) {
-					case 'COOL':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool',
-							{
-								coolCelsius: newCool,
-							},
-						)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							coolCelsius: newCool,
-						}
-						self.log('info', `Set ${getDisplayName(device)} cool setpoint to ${newCool}°C`)
-						break
-					case 'HEAT':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat',
-							{
-								heatCelsius: newHeat,
-							},
-						)
-						self.log('info', `Set ${getDisplayName(device)} heat setpoint to ${newHeat}°C`)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							heatCelsius: newHeat,
-						}
-						break
+				if (mode === 'COOL' && setpoint?.coolCelsius !== undefined) {
+					const newCool = roundToNearestHalf(setpoint.coolCelsius + step)
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_COOL,
+						{ coolCelsius: newCool },
+						`Set ${name} cool setpoint to ${newCool}°C`,
+						() => {
+							device.traits[TRAIT.SETPOINT] = { ...setpoint, coolCelsius: newCool }
+						},
+					)
+				} else if (mode === 'HEAT' && setpoint?.heatCelsius !== undefined) {
+					const newHeat = roundToNearestHalf(setpoint.heatCelsius + step)
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_HEAT,
+						{ heatCelsius: newHeat },
+						`Set ${name} heat setpoint to ${newHeat}°C`,
+						() => {
+							device.traits[TRAIT.SETPOINT] = { ...setpoint, heatCelsius: newHeat }
+						},
+					)
+				} else {
+					self.log(
+						'warn',
+						`${name} is in ${mode ?? 'unknown'} mode; "Adjust Temperature" needs Heat or Cool mode (use "Adjust Temperature (Heat/Cool)" for Heat/Cool mode)`,
+					)
 				}
 			},
 		},
+
 		adjust_temperature_heatcool: {
 			name: 'Adjust Temperature (Heat/Cool)',
-			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
-				{
-					type: 'dropdown' as const,
-					id: 'direction',
-					label: 'Direction',
-					default: 'increase',
-					choices: [
-						{ id: 'increase', label: 'Increase' },
-						{ id: 'decrease', label: 'Decrease' },
-					],
-				},
-			],
+			description: 'Raise or lower both setpoints by 0.5°C. Works when the thermostat is in Heat/Cool mode.',
+			options: [deviceOption(), directionOption()],
 			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
-				const setpoint = device?.traits['sdm.devices.traits.ThermostatTemperatureSetpoint']
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !setpoint || !self.client) return
+				const name = getDisplayName(device)
+				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
+				const setpoint = device.traits[TRAIT.SETPOINT]
+				const step = event.options.direction === 'increase' ? 0.5 : -0.5
 
-				const INCREMENT = event.options.direction === 'increase' ? 0.5 : -0.5
-				const newCool = roundToHalf(setpoint.coolCelsius! + INCREMENT)
-				const newHeat = roundToHalf(setpoint.heatCelsius! + INCREMENT)
-				switch (mode) {
-					case 'HEATCOOL':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange',
-							{
-								coolCelsius: newCool,
-								heatCelsius: newHeat,
-							},
-						)
-						self.log('info', `Set ${getDisplayName(device)} heat/cool setpoints to ${newHeat}/${newCool}°C`)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							heatCelsius: newHeat,
-							coolCelsius: newCool,
-						}
-						break
+				if (mode === 'HEATCOOL' && setpoint?.heatCelsius !== undefined && setpoint.coolCelsius !== undefined) {
+					const newHeat = roundToNearestHalf(setpoint.heatCelsius + step)
+					const newCool = roundToNearestHalf(setpoint.coolCelsius + step)
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_RANGE,
+						{ heatCelsius: newHeat, coolCelsius: newCool },
+						`Set ${name} heat/cool setpoints to ${newHeat}/${newCool}°C`,
+						() => {
+							device.traits[TRAIT.SETPOINT] = { ...setpoint, heatCelsius: newHeat, coolCelsius: newCool }
+						},
+					)
+				} else {
+					self.log(
+						'warn',
+						`${name} is in ${mode ?? 'unknown'} mode; "Adjust Temperature (Heat/Cool)" needs Heat/Cool mode (use "Adjust Temperature" for Heat or Cool mode)`,
+					)
 				}
 			},
 		},
+
 		set_temperature: {
 			name: 'Set Temperature',
+			description: 'Set the heat or cool setpoint. The thermostat must already be in the selected mode.',
 			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
+				deviceOption(),
 				{
 					type: 'dropdown' as const,
 					id: 'mode',
 					label: 'Mode',
 					default: 'COOL',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'COOL', label: 'Cool' },
 						{ id: 'HEAT', label: 'Heat' },
@@ -170,54 +194,53 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			callback: async (
 				event: CompanionActionEvent<{ deviceId: string; mode: 'HEAT' | 'COOL'; temperature: number }>,
 			) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
-				const setpoint = device?.traits['sdm.devices.traits.ThermostatTemperatureSetpoint']
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !setpoint || !self.client) return
+				const name = getDisplayName(device)
+				const currentMode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
+				const setpoint = device.traits[TRAIT.SETPOINT]
+				const temperature = event.options.temperature
 
-				switch (mode) {
-					case 'COOL':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool',
-							{
-								coolCelsius: event.options.temperature,
-							},
-						)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							coolCelsius: event.options.temperature,
-						}
-						self.log('info', `Set ${getDisplayName(device)} cool setpoint to ${event.options.temperature}°C`)
-						break
-					case 'HEAT':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat',
-							{
-								heatCelsius: event.options.temperature,
-							},
-						)
-						self.log('info', `Set ${getDisplayName(device)} heat setpoint to ${event.options.temperature}°C`)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							heatCelsius: event.options.temperature,
-						}
-						break
+				if (currentMode !== event.options.mode) {
+					self.log(
+						'warn',
+						`${name} is in ${currentMode ?? 'unknown'} mode; cannot set a ${event.options.mode.toLowerCase()} setpoint. Use "Set mode" first`,
+					)
+					return
+				}
+
+				if (event.options.mode === 'COOL') {
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_COOL,
+						{ coolCelsius: temperature },
+						`Set ${name} cool setpoint to ${temperature}°C`,
+						() => {
+							device.traits[TRAIT.SETPOINT] = { ...setpoint, coolCelsius: temperature }
+						},
+					)
+				} else {
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_HEAT,
+						{ heatCelsius: temperature },
+						`Set ${name} heat setpoint to ${temperature}°C`,
+						() => {
+							device.traits[TRAIT.SETPOINT] = { ...setpoint, heatCelsius: temperature }
+						},
+					)
 				}
 			},
 		},
+
 		set_temperature_heatcool: {
 			name: 'Set Temperature (Heat/Cool)',
+			description: 'Set both setpoints. The thermostat must already be in Heat/Cool mode.',
 			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
+				deviceOption(),
 				{
 					type: 'number' as const,
 					id: 'temperatureCool',
@@ -244,84 +267,80 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					temperatureHeat: number
 				}>,
 			) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
-				const setpoint = device?.traits['sdm.devices.traits.ThermostatTemperatureSetpoint']
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !setpoint || !self.client) return
+				const name = getDisplayName(device)
+				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
+				const setpoint = device.traits[TRAIT.SETPOINT]
+				const { temperatureCool, temperatureHeat } = event.options
 
-				switch (mode) {
-					case 'HEATCOOL':
-						await self.client.executeCommand(
-							device.name,
-							'sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange',
-							{
-								coolCelsius: event.options.temperatureCool,
-								heatCelsius: event.options.temperatureHeat,
-							},
-						)
-						device.traits['sdm.devices.traits.ThermostatTemperatureSetpoint'] = {
-							...setpoint,
-							coolCelsius: event.options.temperatureCool,
-							heatCelsius: event.options.temperatureHeat,
-						}
-						self.log(
-							'info',
-							`Set ${getDisplayName(device)} heat/cool setpoints to ${event.options.temperatureCool}/${event.options.temperatureHeat}°C`,
-						)
-						break
+				if (mode !== 'HEATCOOL') {
+					self.log(
+						'warn',
+						`${name} is in ${mode ?? 'unknown'} mode; "Set Temperature (Heat/Cool)" needs Heat/Cool mode (use "Set Temperature" for Heat or Cool mode)`,
+					)
+					return
 				}
+
+				await sendCommand(
+					self,
+					device,
+					CMD.SET_RANGE,
+					{ coolCelsius: temperatureCool, heatCelsius: temperatureHeat },
+					`Set ${name} heat/cool setpoints to ${temperatureHeat}/${temperatureCool}°C`,
+					() => {
+						device.traits[TRAIT.SETPOINT] = { ...setpoint, coolCelsius: temperatureCool, heatCelsius: temperatureHeat }
+					},
+				)
 			},
 		},
+
 		set_mode: {
 			name: 'Set mode',
 			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
+				deviceOption(),
 				{
 					type: 'dropdown' as const,
 					id: 'mode',
 					label: 'Mode',
 					default: 'COOL',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'COOL', label: 'Cool' },
 						{ id: 'HEAT', label: 'Heat' },
 						{ id: 'HEATCOOL', label: 'Heat/Cool' },
+						{ id: 'OFF', label: 'Off' },
 					],
 				},
 			],
 			callback: async (event: CompanionActionEvent<{ deviceId: string; mode: string }>) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !self.client) return
-
-				await self.client.executeCommand(device.name, 'sdm.devices.commands.ThermostatMode.SetMode', {
-					mode: event.options.mode,
-				})
-				self.log('info', `Set ${getDisplayName(device)} mode to ${event.options.mode}`)
+				await sendCommand(
+					self,
+					device,
+					CMD.SET_MODE,
+					{ mode: event.options.mode },
+					`Set ${getDisplayName(device)} mode to ${event.options.mode}`,
+					() => {
+						device.traits[TRAIT.THERMOSTAT_MODE] = { mode: event.options.mode as ThermostatMode }
+					},
+				)
 			},
 		},
+
 		set_mode_eco: {
 			name: 'Set ECO mode',
 			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
+				deviceOption(),
 				{
 					type: 'dropdown' as const,
 					id: 'mode',
 					label: 'Mode',
 					default: 'OFF',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'OFF', label: 'Off' },
 						{ id: 'MANUAL_ECO', label: 'ECO' },
@@ -329,32 +348,35 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 				},
 			],
 			callback: async (event: CompanionActionEvent<{ deviceId: string; mode: string }>) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !self.client) return
-
-				await self.client.executeCommand(device.name, 'sdm.devices.commands.ThermostatEco.SetMode', {
-					mode: event.options.mode,
-				})
-				self.log('info', `Set ${getDisplayName(device)} ECO mode to ${event.options.mode}`)
+				await sendCommand(
+					self,
+					device,
+					CMD.SET_ECO,
+					{ mode: event.options.mode },
+					`Set ${getDisplayName(device)} ECO mode to ${event.options.mode}`,
+					() => {
+						device.traits['sdm.devices.traits.ThermostatEco'] = {
+							...device.traits['sdm.devices.traits.ThermostatEco'],
+							mode: event.options.mode,
+						}
+					},
+				)
 			},
 		},
+
 		fan_timer: {
 			name: 'Fan Timer',
 			options: [
-				{
-					type: 'dropdown' as const,
-					id: 'deviceId',
-					label: 'Device',
-					default: deviceThermostatChoices[0]?.id ?? '',
-					choices: deviceThermostatChoices,
-				},
+				deviceOption(),
 				{
 					type: 'dropdown' as const,
 					id: 'fanMode',
 					label: 'Mode',
 					default: 'OFF',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'OFF', label: 'Off' },
 						{ id: 'ON', label: 'On' },
@@ -371,16 +393,23 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 				},
 			],
 			callback: async (event: CompanionActionEvent<{ deviceId: string; fanMode: string; timer: number }>) => {
-				const device = self.devices.get(event.options.deviceId)
-				const mode = device?.traits['sdm.devices.traits.ThermostatMode']?.mode
+				const device = getThermostat(self, event.options.deviceId)
+				if (!device) return
 
-				if (!device || !mode || !self.client) return
+				const name = getDisplayName(device)
 
-				await self.client.executeCommand(device.name, 'sdm.devices.commands.Fan.SetTimer', {
-					timerMode: event.options.fanMode,
-					duration: event.options.timer,
-				})
-				self.log('info', `Set ${getDisplayName(device)} Fan Timer to ${event.options.timer} seconds`)
+				if (event.options.fanMode === 'ON') {
+					const seconds = Math.round(event.options.timer)
+					await sendCommand(
+						self,
+						device,
+						CMD.SET_FAN,
+						{ timerMode: 'ON', duration: `${seconds}s` },
+						`Set ${name} fan timer to ${seconds} seconds`,
+					)
+				} else {
+					await sendCommand(self, device, CMD.SET_FAN, { timerMode: 'OFF' }, `Turned ${name} fan timer off`)
+				}
 			},
 		},
 	}

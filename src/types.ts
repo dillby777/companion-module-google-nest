@@ -37,8 +37,8 @@ export const TRAIT = {
 	CONNECTIVITY: 'sdm.devices.traits.Connectivity',
 	TEMPERATURE: 'sdm.devices.traits.Temperature',
 	THERMOSTAT_MODE: 'sdm.devices.traits.ThermostatMode',
+	SETPOINT: 'sdm.devices.traits.ThermostatTemperatureSetpoint',
 	HVAC: 'sdm.devices.traits.ThermostatHvac',
-	// etc
 } as const
 
 /** OAuth token response from Google */

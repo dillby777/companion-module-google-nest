@@ -2,10 +2,13 @@ import { type SomeCompanionConfigField } from '@companion-module/base'
 
 export type ModuleConfig = {
 	clientId: string
-	clientSecret: string
 	projectId: string
-	refreshToken: string
 	pollIntervalSec: number
+}
+
+export type ModuleSecrets = {
+	clientSecret: string
+	refreshToken: string
 }
 
 export function GetConfigFields(): SomeCompanionConfigField[] {
@@ -29,7 +32,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			width: 8,
 		},
 		{
-			type: 'textinput',
+			type: 'secret-text',
 			id: 'clientSecret',
 			label: 'Client Secret',
 			width: 8,
@@ -51,7 +54,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			width: 8,
 		},
 		{
-			type: 'textinput',
+			type: 'secret-text',
 			id: 'refreshToken',
 			label: 'OAuth Refresh Token',
 			default: '',
@@ -63,7 +66,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'pollIntervalSec',
 			label: 'Poll Interval (seconds)',
 			default: 30,
-			min: 12,
+			min: 15,
 			max: 300,
 			width: 4,
 			tooltip:
