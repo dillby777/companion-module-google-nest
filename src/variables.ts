@@ -5,6 +5,7 @@ import type {
 	CompanionVariableValue,
 	CompanionVariableValues,
 } from '@companion-module/base'
+import { TRAIT } from './types.js'
 
 export type VariablesSchema = Record<string, CompanionVariableValue | undefined>
 
@@ -25,6 +26,14 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		definitions[`${prefix}_home`] = { name: label('Home Name') }
 		values[`${prefix}_name`] = displayName
 		values[`${prefix}_home`] = home
+
+		if (device.type === 'sdm.devices.types.THERMOSTAT') {
+			for (const key of ['heatCelsius', 'coolCelsius']) {
+				const id = buildVariableId(prefix, TRAIT.SETPOINT, key)
+				definitions[id] = { name: label(`thermostattemperaturesetpoint: ${key}`) }
+				values[id] = ''
+			}
+		}
 
 		for (const [traitName, traitData] of Object.entries(device.traits)) {
 			if (!traitData) continue

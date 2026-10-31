@@ -26,6 +26,15 @@ function getThermostat(self: ModuleInstance, deviceId: string): SdmDevice | unde
 	}
 	return device
 }
+/** Google rejects all setpoint commands in MANUAL_ECO and stops returning setpoints */
+function blockedByEco(self: ModuleInstance, device: SdmDevice): boolean {
+	if (device.traits['sdm.devices.traits.ThermostatEco']?.mode !== 'MANUAL_ECO') return false
+	self.log(
+		'warn',
+		`${getDisplayName(device)} is in ECO mode; Google rejects setpoint changes. Turn ECO off first ("Set ECO mode")`,
+	)
+	return true
+}
 
 /**
  * Send a command, log the outcome, and on success update the cached state
@@ -38,6 +47,7 @@ async function sendCommand(
 	params: Record<string, unknown>,
 	description: string,
 	applyCache?: () => void,
+	refresh = false,
 ): Promise<void> {
 	if (!self.client) return
 
@@ -52,6 +62,7 @@ async function sendCommand(
 	self.log('info', description)
 	self.updateVariableDefinitions()
 	self.checkFeedbacks('thermostat_mode', 'hvac_active')
+	if (refresh) self.requestRefresh()
 }
 
 export function ThermostatActions(self: ModuleInstance): CompanionActionDefinitions<ActionsSchema> {
@@ -91,6 +102,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
+				if (blockedByEco(self, device)) return
 
 				const name = getDisplayName(device)
 				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
@@ -137,7 +149,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
-
+				if (blockedByEco(self, device)) return
 				const name = getDisplayName(device)
 				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
 				const setpoint = device.traits[TRAIT.SETPOINT]
@@ -196,7 +208,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
-
+				if (blockedByEco(self, device)) return
 				const name = getDisplayName(device)
 				const currentMode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
 				const setpoint = device.traits[TRAIT.SETPOINT]
@@ -245,7 +257,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					type: 'number' as const,
 					id: 'temperatureCool',
 					label: 'Cool Temperature (°C)',
-					default: 20,
+					default: 23,
 					min: 5,
 					max: 35,
 					step: 0.5,
@@ -254,7 +266,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					type: 'number' as const,
 					id: 'temperatureHeat',
 					label: 'Heat Temperature (°C)',
-					default: 23,
+					default: 20,
 					min: 5,
 					max: 35,
 					step: 0.5,
@@ -269,6 +281,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
+				if (blockedByEco(self, device)) return
 
 				const name = getDisplayName(device)
 				const mode = device.traits[TRAIT.THERMOSTAT_MODE]?.mode
@@ -280,6 +293,11 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 						'warn',
 						`${name} is in ${mode ?? 'unknown'} mode; "Set Temperature (Heat/Cool)" needs Heat/Cool mode (use "Set Temperature" for Heat or Cool mode)`,
 					)
+					return
+				}
+
+				if (temperatureHeat >= temperatureCool) {
+					self.log('warn', `${name}: heat (${temperatureHeat}°C) must be lower than cool (${temperatureCool}°C)`)
 					return
 				}
 
@@ -327,6 +345,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					() => {
 						device.traits[TRAIT.THERMOSTAT_MODE] = { mode: event.options.mode as ThermostatMode }
 					},
+					true,
 				)
 			},
 		},
@@ -363,6 +382,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 							mode: event.options.mode,
 						}
 					},
+					true,
 				)
 			},
 		},

@@ -125,6 +125,21 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
 		}
+		if (this.refreshTimer) {
+			clearTimeout(this.refreshTimer)
+			this.refreshTimer = null
+		}
+	}
+
+	private refreshTimer: NodeJS.Timeout | null = null
+
+	/** Poll once shortly after a mode change, to pick up setpoints Google only returns for the current mode */
+	public requestRefresh(delayMs = 3000): void {
+		if (this.refreshTimer) return
+		this.refreshTimer = setTimeout(() => {
+			this.refreshTimer = null
+			void this.getGoogleNestDevices()
+		}, delayMs)
 	}
 
 	/**
@@ -192,7 +207,17 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err)
 			this.log('error', `Poll failed: ${message}`)
-			this.updateStatus(InstanceStatus.UnknownError, message)
+
+			if (message.includes('invalid_grant')) {
+				// A dead refresh token won't recover on its own, so stop hammering Google until the user fixes it
+				this.stopPolling()
+				this.updateStatus(
+					InstanceStatus.AuthenticationFailure,
+					'Google rejected the refresh token. Generate a new one and save the connection settings',
+				)
+			} else {
+				this.updateStatus(InstanceStatus.UnknownError, message)
+			}
 		} finally {
 			this.polling = false
 		}
