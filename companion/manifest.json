@@ -7,8 +7,8 @@
 	"description": "Gets Google Nest devices, thermostats for now",
 	"version": "1.0.3",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-google-nest.git",
-	"bugs": "https://github.com/bitfocus/companion-module-google-nest/issues",
+	"repository": "git+https://github.com/dillby777/companion-module-google-nest.git",
+	"bugs": "https://github.com/dillby777/companion-module-google-nest/issues",
 	"maintainers": [
 		{
 			"name": "Dylan",
