@@ -17,7 +17,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-google-nest.git"
+		"url": "git+https://github.com/dillby777/companion-module-google-nest.git"
 	},
 	"engines": {
 		"node": "^22.20",
