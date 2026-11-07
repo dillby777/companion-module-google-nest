@@ -21,7 +21,8 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 				1. Create a Google Cloud project and enable the "Smart Device Management API". <a href="https://console.cloud.google.com/" target="_blank">https://console.cloud.google.com/</a> <br/>
 				2. Create OAuth 2.0 credentials and enter the Client ID and Client Secret below. <br/>
 				3. Create a Nest Device Access project and link it to your Google Cloud project. <a href="https://developers.google.com/nest/device-access" target="_blank">https://developers.google.com/nest/device-access</a> <br/>
-				4. Get OAuth tokens <a href="https://developers.google.com/nest/device-access/authorize" target="_blank">https://developers.google.com/nest/device-access/authorize</a> <br/>
+				4. Get OAuth refresh tokens <a href="https://developers.google.com/nest/device-access/authorize" target="_blank">https://developers.google.com/nest/device-access/authorize</a> <br/>
+				5. In the Google Cloud console, set the OAuth consent screen's publishing status to "In production". If it stays on "Testing", Google expires the refresh token after 7 days and the module will stop connecting. If that happens, generate a new refresh token and save it in the connection settings.
 				`,
 			width: 8,
 		},
@@ -59,7 +60,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'OAuth Refresh Token',
 			default: '',
 			width: 12,
-			tooltip: 'Obtained from the Google OAuth flow — see HELP.md for instructions',
+			tooltip: 'Obtained from the Google OAuth flow — see above "Google OAuth flow" link for instructions',
 		},
 		{
 			type: 'number',

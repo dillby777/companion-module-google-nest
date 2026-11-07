@@ -1,8 +1,8 @@
-import type { CompanionActionEvent, CompanionActionDefinitions } from '@companion-module/base'
+import type { CompanionActionDefinitions } from '@companion-module/base'
 import { getDisplayName, roundToNearestHalf } from './helpers.js'
 import type ModuleInstance from './main.js'
 import type { ActionsSchema } from './actions.js'
-import { TRAIT, type SdmDevice, type ThermostatMode } from './types.js'
+import { TRAIT, type SdmDevice } from './types.js'
 
 const CMD = {
 	SET_COOL: 'sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool',
@@ -99,7 +99,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			name: 'Adjust Temperature',
 			description: 'Raise or lower the setpoint by 0.5°C. Works when the thermostat is in Heat or Cool mode.',
 			options: [deviceOption(), directionOption()],
-			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 				if (blockedByEco(self, device)) return
@@ -146,7 +146,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 			name: 'Adjust Temperature (Heat/Cool)',
 			description: 'Raise or lower both setpoints by 0.5°C. Works when the thermostat is in Heat/Cool mode.',
 			options: [deviceOption(), directionOption()],
-			callback: async (event: CompanionActionEvent<{ deviceId: string; direction: 'increase' | 'decrease' }>) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 				if (blockedByEco(self, device)) return
@@ -203,9 +203,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					step: 0.5,
 				},
 			],
-			callback: async (
-				event: CompanionActionEvent<{ deviceId: string; mode: 'HEAT' | 'COOL'; temperature: number }>,
-			) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 				if (blockedByEco(self, device)) return
@@ -272,13 +270,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					step: 0.5,
 				},
 			],
-			callback: async (
-				event: CompanionActionEvent<{
-					deviceId: string
-					temperatureCool: number
-					temperatureHeat: number
-				}>,
-			) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 				if (blockedByEco(self, device)) return
@@ -332,7 +324,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					],
 				},
 			],
-			callback: async (event: CompanionActionEvent<{ deviceId: string; mode: string }>) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 
@@ -343,7 +335,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					{ mode: event.options.mode },
 					`Set ${getDisplayName(device)} mode to ${event.options.mode}`,
 					() => {
-						device.traits[TRAIT.THERMOSTAT_MODE] = { mode: event.options.mode as ThermostatMode }
+						device.traits[TRAIT.THERMOSTAT_MODE] = { mode: event.options.mode }
 					},
 					true,
 				)
@@ -366,7 +358,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					],
 				},
 			],
-			callback: async (event: CompanionActionEvent<{ deviceId: string; mode: string }>) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 
@@ -412,7 +404,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					step: 1,
 				},
 			],
-			callback: async (event: CompanionActionEvent<{ deviceId: string; fanMode: string; timer: number }>) => {
+			callback: async (event) => {
 				const device = getThermostat(self, event.options.deviceId)
 				if (!device) return
 

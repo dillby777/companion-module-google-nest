@@ -62,7 +62,8 @@ export function UpdatePresets(self: ModuleInstance): void {
 				{
 					feedbackId: 'device_online',
 					options: { deviceId },
-					style: { bgcolor: BLACK, color: WHITE },
+					isInverted: true,
+					style: { bgcolor: 0xcc0000, color: WHITE },
 				},
 			],
 		}

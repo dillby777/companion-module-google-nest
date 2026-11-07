@@ -1,6 +1,6 @@
 import { getDisplayName } from './helpers.js'
 import type ModuleInstance from './main.js'
-import { TRAIT } from './types.js'
+import { TRAIT, type ThermostatMode } from './types.js'
 
 export type FeedbacksSchema = {
 	device_online: {
@@ -13,7 +13,7 @@ export type FeedbacksSchema = {
 		type: 'boolean'
 		options: {
 			deviceId: string
-			mode: string
+			mode: ThermostatMode
 		}
 	}
 	hvac_active: {
@@ -27,13 +27,13 @@ export type FeedbacksSchema = {
 export function UpdateFeedbacks(self: ModuleInstance): void {
 	const deviceChoices = Array.from(self.devices.values()).map((d) => ({
 		id: d.name.split('/').pop()!,
-		label: getDisplayName(d),
+		label: `[${d.structureName}] ${getDisplayName(d)}`,
 	}))
 	const deviceThermostatChoices = Array.from(self.devices.values())
 		.filter((d) => d.type === 'sdm.devices.types.THERMOSTAT')
 		.map((d) => ({
 			id: d.name.split('/').pop()!,
-			label: getDisplayName(d),
+			label: `[${d.structureName}] ${getDisplayName(d)}`,
 		}))
 
 	self.setFeedbackDefinitions({
@@ -78,7 +78,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					type: 'dropdown',
 					id: 'mode',
 					label: 'Mode',
-					default: 'HEAT',
+					default: 'HEAT' as ThermostatMode,
 					choices: [
 						{ id: 'HEAT', label: 'Heat' },
 						{ id: 'COOL', label: 'Cool' },

@@ -1,5 +1,6 @@
 import type ModuleInstance from './main.js'
 import { ThermostatActions } from './actionsThermostat.js'
+import type { ThermostatMode } from './types.js'
 
 export type ActionsSchema = {
 	adjust_temperature: { options: { deviceId: string; direction: 'increase' | 'decrease' } }
@@ -8,7 +9,7 @@ export type ActionsSchema = {
 	set_temperature_heatcool: {
 		options: { deviceId: string; temperatureHeat: number; temperatureCool: number }
 	}
-	set_mode: { options: { deviceId: string; mode: string } }
+	set_mode: { options: { deviceId: string; mode: ThermostatMode } }
 	set_mode_eco: { options: { deviceId: string; mode: 'OFF' | 'MANUAL_ECO' } }
 	fan_timer: { options: { deviceId: string; fanMode: 'OFF' | 'ON'; timer: number } }
 }

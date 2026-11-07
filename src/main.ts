@@ -28,6 +28,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	public client: SdmClient | null = null
 	private pollTimer: NodeJS.Timeout | null = null
 	private polling = false
+	private authFailed = false
 	/** Fingerprint of everything the action/feedback dropdowns are built from. null = never built from a successful poll */
 	private deviceSignature: string | null = null
 	private structuresFetchedAt = 0
@@ -97,6 +98,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	/** (Re)create the client and start polling. Safe to call repeatedly. */
 	private async restart(): Promise<void> {
 		this.stopPolling()
+		this.authFailed = false
 		this.structures.clear()
 		this.structuresFetchedAt = 0
 
@@ -110,7 +112,9 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 		this.updateStatus(InstanceStatus.Connecting)
 
 		await this.getGoogleNestDevices()
-		this.startPolling(this.config.pollIntervalSec ?? 30)
+		if (this.authFailed) return
+		const sec = Math.min(300, Math.max(15, Number(this.config.pollIntervalSec) || 30))
+		this.startPolling(sec)
 	}
 
 	private startPolling(intervalSec: number): void {
@@ -155,7 +159,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	async getGoogleNestDevices(): Promise<void> {
-		if (!this.client || this.polling) return
+		if (!this.client || this.polling || this.authFailed) return
 		this.polling = true
 
 		try {
@@ -210,6 +214,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 
 			if (message.includes('invalid_grant')) {
 				// A dead refresh token won't recover on its own, so stop hammering Google until the user fixes it
+				this.authFailed = true
 				this.stopPolling()
 				this.updateStatus(
 					InstanceStatus.AuthenticationFailure,
