@@ -5,7 +5,7 @@
 	"name": "Google: Nest",
 	"shortname": "Google-Nest",
 	"description": "Gets Google Nest devices, thermostats for now",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"license": "MIT",
 	"repository": "git+https://github.com/dillby777/companion-module-google-nest.git",
 	"bugs": "https://github.com/dillby777/companion-module-google-nest/issues",
