@@ -28,10 +28,10 @@ function getThermostat(self: ModuleInstance, deviceId: string): SdmDevice | unde
 }
 /** Google rejects all setpoint commands in MANUAL_ECO and stops returning setpoints */
 function blockedByEco(self: ModuleInstance, device: SdmDevice): boolean {
-	if (device.traits['sdm.devices.traits.ThermostatEco']?.mode !== 'MANUAL_ECO') return false
+	if (device.traits[TRAIT.ECO]?.mode !== 'MANUAL_ECO') return false
 	self.log(
 		'warn',
-		`${getDisplayName(device)} is in ECO mode; Google rejects setpoint changes. Turn ECO off first ("Set ECO mode")`,
+		`${getDisplayName(device)} is in ECO mode; Google rejects setpoint changes. Turn ECO off first ("Set ECO Mode")`,
 	)
 	return true
 }
@@ -61,7 +61,7 @@ async function sendCommand(
 	applyCache?.()
 	self.log('info', description)
 	self.updateVariableDefinitions()
-	self.checkFeedbacks('thermostat_mode', 'hvac_active')
+	self.checkFeedbacks('thermostat_mode', 'hvac_active', 'eco_active')
 	if (refresh) self.requestRefresh()
 }
 
@@ -133,6 +133,12 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 							device.traits[TRAIT.SETPOINT] = { ...setpoint, heatCelsius: newHeat }
 						},
 					)
+				} else if (mode === 'HEAT' || mode === 'COOL') {
+					// Right mode, but Google only returns the current mode's setpoint, so it arrives with the next poll
+					self.log(
+						'warn',
+						`${name}: ${mode.toLowerCase()} setpoint not loaded yet after the mode change; try again in a few seconds`,
+					)
 				} else {
 					self.log(
 						'warn',
@@ -167,6 +173,11 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 						() => {
 							device.traits[TRAIT.SETPOINT] = { ...setpoint, heatCelsius: newHeat, coolCelsius: newCool }
 						},
+					)
+				} else if (mode === 'HEATCOOL') {
+					self.log(
+						'warn',
+						`${name}: heat/cool setpoints not loaded yet after the mode change; try again in a few seconds`,
 					)
 				} else {
 					self.log(
@@ -215,7 +226,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 				if (currentMode !== event.options.mode) {
 					self.log(
 						'warn',
-						`${name} is in ${currentMode ?? 'unknown'} mode; cannot set a ${event.options.mode.toLowerCase()} setpoint. Use "Set mode" first`,
+						`${name} is in ${currentMode ?? 'unknown'} mode; cannot set a ${event.options.mode.toLowerCase()} setpoint. Use "Set Mode" first`,
 					)
 					return
 				}
@@ -308,6 +319,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 
 		set_mode: {
 			name: 'Set mode',
+			description: 'Set the thermostat mode: Heat, Cool, Heat/Cool or Off.',
 			options: [
 				deviceOption(),
 				{
@@ -343,7 +355,8 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 		},
 
 		set_mode_eco: {
-			name: 'Set ECO mode',
+			name: 'Set ECO Mode',
+			description: 'Turn ECO on or off. While ECO is on, Google rejects setpoint changes.',
 			options: [
 				deviceOption(),
 				{
@@ -381,6 +394,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 
 		fan_timer: {
 			name: 'Fan Timer',
+			description: 'Run the fan for a set time, or turn the fan timer off.',
 			options: [
 				deviceOption(),
 				{
@@ -402,6 +416,7 @@ export function ThermostatActions(self: ModuleInstance): CompanionActionDefiniti
 					min: 1,
 					max: 43200,
 					step: 1,
+					isVisibleExpression: '$(options:fanMode) == "ON"',
 				},
 			],
 			callback: async (event) => {

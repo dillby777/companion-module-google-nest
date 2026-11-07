@@ -46,3 +46,21 @@ export function buildVariableId(prefix: string, traitName: string, attrKey: stri
 	const segment = traitName.split('.').pop()!.toLowerCase()
 	return `${prefix}_${segment}_${attrKey.toLowerCase()}`
 }
+
+/**
+ * Node's fetch rejects with a bare "fetch failed" and puts the real reason
+ * (e.g. ENOTFOUND, ECONNREFUSED) in err.cause. Surface it, and flag
+ * network-level failures so they can be reported as connection problems.
+ */
+export function describeError(err: unknown): { message: string; isNetworkError: boolean } {
+	if (!(err instanceof Error)) return { message: String(err), isNetworkError: false }
+
+	const cause = err.cause as { code?: string; message?: string } | undefined
+	const detail = cause?.code ?? cause?.message
+
+	return {
+		message: detail ? `${err.message} (${detail})` : err.message,
+		// HTTP errors in sdm-client.ts are plain Errors; only fetch itself throws a TypeError
+		isNetworkError: err instanceof TypeError && cause !== undefined,
+	}
+}

@@ -81,11 +81,6 @@ export class SdmClient {
 		return data.devices ?? []
 	}
 
-	/** Fetch a single device by its full resource name */
-	async getDevice(fullName: string): Promise<SdmDevice> {
-		return this.get<SdmDevice>(`/${fullName}`)
-	}
-
 	async executeCommand(deviceName: string, command: string, params: Record<string, unknown>): Promise<void> {
 		const token = await this.getToken()
 		const res = await fetch(`${SDM_BASE}/${deviceName}:executeCommand`, {
@@ -101,6 +96,7 @@ export class SdmClient {
 			const text = await res.text()
 			throw new Error(`SDM executeCommand failed (${res.status}): ${text}`)
 		}
+		await res.body?.cancel()
 	}
 	async listStructures(): Promise<SdmStructure[]> {
 		const data = await this.get<{ structures?: SdmStructure[] }>(`/enterprises/${this.config.projectId}/structures`)

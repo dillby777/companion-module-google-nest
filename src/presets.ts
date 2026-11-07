@@ -31,7 +31,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			heatcool: `${key}_mode_heatcool`,
 			off: `${key}_mode_off`,
 			hvac: `${key}_hvac`,
-			online: `${key}_online`,
+			eco: `${key}_eco`,
 		}
 
 		const modePreset = (mode: 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF', label: string) => ({
@@ -138,6 +138,24 @@ export function UpdatePresets(self: ModuleInstance): void {
 				},
 			],
 		}
+		presets[ids.eco] = {
+			type: 'simple',
+			name: `${name} ECO`,
+			style: { text: 'ECO', size: 'auto', color: WHITE, bgcolor: BLACK },
+			steps: [
+				{
+					down: [{ actionId: 'set_mode_eco', options: { deviceId, mode: 'MANUAL_ECO' } }],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'eco_active',
+					options: { deviceId },
+					style: { bgcolor: GREEN, color: WHITE },
+				},
+			],
+		}
 
 		structure.push({
 			id: `thermostat_${key}`,
@@ -160,7 +178,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 					id: `${key}_modes`,
 					name: 'Modes',
 					type: 'simple',
-					presets: [ids.heat, ids.cool, ids.heatcool, ids.off],
+					presets: [ids.heat, ids.cool, ids.heatcool, ids.off, ids.eco],
 				},
 			],
 		})

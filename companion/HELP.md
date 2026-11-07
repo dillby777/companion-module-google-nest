@@ -15,8 +15,8 @@
 
 - **Adjust Temperature / Set Temperature:** for Heat or Cool mode.
 - **Adjust Temperature (Heat/Cool) / Set Temperature (Heat/Cool):** for Heat/Cool mode.
-- **Set mode:** Heat, Cool, Heat/Cool or Off.
-- **Set ECO mode:** turn ECO on or off. While ECO is on, Google rejects all setpoint changes, so turn it off first.
+- **Set Mode:** Heat, Cool, Heat/Cool or Off.
+- **Set ECO Mode:** turn ECO on or off. While ECO is on, Google rejects all setpoint changes, so turn it off first.
 - **Fan Timer:** run the fan for a set time, or turn it off.
 
 All temperatures are in °C, because the Google API only accepts Celsius.
@@ -26,10 +26,11 @@ All temperatures are in °C, because the Google API only accepts Celsius.
 - **Device: Online**
 - **Thermostat: Mode active**
 - **Thermostat: HVAC running**
+- **Thermostat: ECO active**
 
 ### Presets
 
-Each thermostat gets presets for current temperature, HVAC status, setpoint up/down (including Heat/Cool) and the four modes.
+Each thermostat gets presets for current temperature, HVAC status, setpoint up/down (including Heat/Cool) and the four modes and ECO.
 
 ### Variables
 

@@ -27,10 +27,17 @@ export type SdmTraits = {
 	'sdm.devices.traits.ThermostatHvac'?: {
 		status: HvacStatus
 	}
+	'sdm.devices.traits.ThermostatEco'?: {
+		mode?: string
+		availableModes?: string[]
+		heatCelsius?: number
+		coolCelsius?: number
+	}
+
 	[key: string]: Record<string, unknown> | undefined // fallback for any other traits
 }
 
-export type ThermostatMode = 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF'
+export type ThermostatMode = 'HEAT' | 'COOL' | 'HEATCOOL' | 'OFF' | 'MANUAL_ECO'
 export type HvacStatus = 'HEATING' | 'COOLING' | 'IDLE'
 
 export const TRAIT = {
@@ -39,6 +46,7 @@ export const TRAIT = {
 	THERMOSTAT_MODE: 'sdm.devices.traits.ThermostatMode',
 	SETPOINT: 'sdm.devices.traits.ThermostatTemperatureSetpoint',
 	HVAC: 'sdm.devices.traits.ThermostatHvac',
+	ECO: 'sdm.devices.traits.ThermostatEco',
 } as const
 
 /** OAuth token response from Google */

@@ -22,6 +22,12 @@ export type FeedbacksSchema = {
 			deviceId: string
 		}
 	}
+	eco_active: {
+		type: 'boolean'
+		options: {
+			deviceId: string
+		}
+	}
 }
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
@@ -82,14 +88,21 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					choices: [
 						{ id: 'HEAT', label: 'Heat' },
 						{ id: 'COOL', label: 'Cool' },
-						{ id: 'HEATCOOL', label: 'Heat + Cool' },
+						{ id: 'HEATCOOL', label: 'Heat/Cool' },
+						{ id: 'MANUAL_ECO', label: 'ECO' },
 						{ id: 'OFF', label: 'Off' },
 					],
 				},
 			],
 			callback: ({ options }) => {
 				const device = self.devices.get(options.deviceId)
-				return device?.traits[TRAIT.THERMOSTAT_MODE]?.mode === options.mode
+				if (!device) return false
+
+				const ecoOn = device.traits[TRAIT.ECO]?.mode === 'MANUAL_ECO'
+				if (options.mode === 'MANUAL_ECO') return ecoOn
+				if (ecoOn) return false // ECO overrides the underlying Heat/Cool/Off mode
+
+				return device.traits[TRAIT.THERMOSTAT_MODE]?.mode === options.mode
 			},
 		},
 		hvac_active: {
@@ -112,6 +125,28 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 			callback: ({ options }) => {
 				const status = self.devices.get(options.deviceId)?.traits[TRAIT.HVAC]?.status
 				return status === 'HEATING' || status === 'COOLING'
+			},
+		},
+		eco_active: {
+			type: 'boolean',
+			name: 'Thermostat: Eco active',
+			description: 'Active when the thermostat is in eco mode',
+			defaultStyle: {
+				bgcolor: 0x00ff00,
+				color: 0x000000,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					id: 'deviceId',
+					label: 'Device',
+					default: deviceThermostatChoices[0]?.id ?? '',
+					choices: deviceThermostatChoices,
+				},
+			],
+			callback: ({ options }) => {
+				const mode = self.devices.get(options.deviceId)?.traits[TRAIT.ECO]?.mode
+				return mode === 'MANUAL_ECO'
 			},
 		},
 	})

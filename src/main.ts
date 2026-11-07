@@ -6,7 +6,7 @@ import { UpdateActions, type ActionsSchema } from './actions.js'
 import { UpdateFeedbacks, type FeedbacksSchema } from './feedbacks.js'
 import { UpdatePresets } from './presets.js'
 import { SdmClient } from './sdm-client.js'
-import { getDisplayName } from './helpers.js'
+import { describeError, getDisplayName } from './helpers.js'
 import type { SdmDevice, SdmStructure } from './types.js'
 
 export type ModuleSchema = {
@@ -26,6 +26,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	structures = new Map<string, SdmStructure>()
 
 	public client: SdmClient | null = null
+	public variableSignature: string | null = null
 	private pollTimer: NodeJS.Timeout | null = null
 	private polling = false
 	private authFailed = false
@@ -147,9 +148,9 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 	}
 
 	/**
-	 * Fingerprint of the things the action/feedback choices depend on.
-	 * The thermostat actions currently filter on mode and setpoint presence,
-	 * so those are included until the actions are reworked.
+	 * Fingerprint of the things the dropdown choices depend on: device id, type,
+	 * home name and display name. When it changes, the action, feedback and
+	 * preset definitions are rebuilt.
 	 */
 	private buildDeviceSignature(): string {
 		return Array.from(this.devices.entries())
@@ -206,10 +207,10 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 			}
 
 			this.updateVariableDefinitions()
-			this.checkFeedbacks('device_online', 'thermostat_mode', 'hvac_active')
+			this.checkFeedbacks('device_online', 'thermostat_mode', 'hvac_active', 'eco_active')
 			this.updateStatus(InstanceStatus.Ok)
 		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
+			const { message, isNetworkError } = describeError(err)
 			this.log('error', `Poll failed: ${message}`)
 
 			if (message.includes('invalid_grant')) {
@@ -220,6 +221,8 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
 					InstanceStatus.AuthenticationFailure,
 					'Google rejected the refresh token. Generate a new one and save the connection settings',
 				)
+			} else if (isNetworkError) {
+				this.updateStatus(InstanceStatus.ConnectionFailure, `Can't reach Google: ${message}`)
 			} else {
 				this.updateStatus(InstanceStatus.UnknownError, message)
 			}
